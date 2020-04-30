@@ -4,11 +4,18 @@ class VendingMachineProduct {
     var name: String
     var amount: Int
     var price: Double
+    var expirationDate: Date
     
-    init(name: String, amount: Int, price: Double) {
+    
+    init(name: String, amount: Int, price: Double, expirationDate: Date?) throws {
         self.name = name
         self.amount = amount
         self.price = price
+        if let date = expirationDate {
+            self.expirationDate = date
+        } else {
+            throw VendingMachineError.invalidDate
+        }
     }
 }
 
@@ -17,6 +24,8 @@ enum VendingMachineError: Error {
     case productUnavailable
     case produtcStuck
     case insufficientFunds
+    case productExpired
+    case invalidDate
 }
 
 extension VendingMachineError: LocalizedError {
@@ -30,6 +39,10 @@ extension VendingMachineError: LocalizedError {
             return "o seu produto ficou preso"
         case .insufficientFunds:
             return "tá faltando dinheiro nisso ai"
+        case .productExpired:
+            return "produto ta meio véio, meu parça"
+        case .invalidDate:
+            return "da uma olhadinha nessa data dnv pf"
         }
     }
 }
@@ -55,6 +68,8 @@ class VendingMachine {
         
         guard produto.price <= self.money else { throw VendingMachineError.insufficientFunds }
         
+        guard produto.expirationDate > Date() else { throw VendingMachineError.productExpired }
+        
         self.money -= produto.price
         produto.amount -= 1
         
@@ -70,16 +85,19 @@ class VendingMachine {
         return money
     }
 }
+let dateFormatter = DateFormatter()
+dateFormatter.dateFormat = "dd-MM-yyyy"
 
 let vendingMachine = VendingMachine(products: [
-    VendingMachineProduct(name: "Carregador de iPhone", amount: 5, price: 150.00),
-    VendingMachineProduct(name: "Funnions", amount: 2, price: 7.00),
-    VendingMachineProduct(name: "Xiaomi Umbrella", amount: 5, price: 125.00),
-    VendingMachineProduct(name: "Trator", amount: 1, price: 75000.00)
+    try VendingMachineProduct(name: "Carregador de iPhone", amount: 5, price: 150.00, expirationDate: dateFormatter.date(from: "11-10-2020")),
+    try VendingMachineProduct(name: "Funnions", amount: 2, price: 0.00, expirationDate: dateFormatter.date(from: "27-02-2020")),
+    try VendingMachineProduct(name: "Xiaomi Umbrella", amount: 5, price: 125.00, expirationDate: dateFormatter.date(from: "31-10-2020")),
+    try VendingMachineProduct(name: "Trator", amount: 1, price: 75000.00, expirationDate: dateFormatter.date(from: "02-02-2020"))
 ])
 
 do {
-    try vendingMachine.getProduct(named: "Funnions", with: 0.0)
+    try vendingMachine.getProduct(named: "Funnions", with: 7.0)
+    try vendingMachine.getProduct(named: "Trator", with: 75000.00)
     try vendingMachine.getProduct(named: "Umbrella", with: 140.0)
     print("deu bom")
 } catch VendingMachineError.produtcStuck {
